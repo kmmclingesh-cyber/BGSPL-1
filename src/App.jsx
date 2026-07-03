@@ -1,21 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
 import { LayoutDashboard, CheckSquare, Users, FolderKanban, FileText, Clock3, Activity, Settings } from 'lucide-react';
+import { loadAll } from './services/api';
 import SystemConnections from './components/SystemConnections';
+import LiveModule from './components/LiveModule';
 
-const modules = [
-  ['/', 'Dashboard', LayoutDashboard], ['/tasks', 'Tasks', CheckSquare], ['/clients', 'Clients', Users],
-  ['/projects', 'Projects', FolderKanban], ['/documents', 'Files', FileText], ['/worklogs', 'Time', Clock3],
-  ['/activities', 'Activity', Activity], ['/settings', 'Settings', Settings]
-];
-
-function Dashboard() {
-  const cards = [['Tasks','0'],['Clients','0'],['Projects','0'],['Today','0h']];
-  return <><div className="hero"><div><span className="eyebrow">BGSP#1</span><h2>Dashboard</h2><p>Company overview.</p></div><button>+ Task</button></div><div className="stats">{cards.map(([label,value])=><article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div></>;
-}
-
-function Placeholder({ title }) { return <section className="panel"><h2>{title}</h2></section>; }
-function SettingsPage() { return <><section className="panel"><h2>Settings</h2></section><SystemConnections/></>; }
-
-export default function App() {
-  return <div className="app"><aside><div className="brand"><div className="mark">B</div><div><b>BGSP#1</b><span>Company OS</span></div></div><nav>{modules.map(([path,label,Icon])=><NavLink key={path} to={path} end={path==='/' }><Icon size={19}/><span>{label}</span></NavLink>)}</nav><div className="company"><span>Workspace</span><b>Brainbanque Global Solutions</b></div></aside><main><header><div><span className="eyebrow">BGSP#1</span><h1>Workspace</h1></div><div className="avatar">L</div></header><div className="content"><Routes><Route path="/" element={<Dashboard/>}/><Route path="/settings" element={<SettingsPage/>}/>{modules.slice(1,-1).map(([path,label])=><Route key={path} path={path} element={<Placeholder title={label}/>}/>)}</Routes></div></main></div>;
-}
+const modules=[['/','Dashboard',LayoutDashboard],['/tasks','Tasks',CheckSquare],['/clients','Clients',Users],['/projects','Projects',FolderKanban],['/documents','Files',FileText],['/worklogs','Time',Clock3],['/activities','Activity',Activity],['/settings','Settings',Settings]];
+function Dashboard(){const [data,setData]=useState(null);useEffect(()=>{loadAll().then(setData).catch(()=>{})},[]);const cards=[['Tasks',data?.tasks?.length||0],['Clients',data?.clients?.length||0],['Projects',data?.development?.length||0],['Files',data?.documents?.length||0]];return <><div className="hero"><div><span className="eyebrow">BGSP#1</span><h2>Dashboard</h2><p>Company overview.</p></div></div><div className="stats">{cards.map(([label,value])=><article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div></>}
+function SettingsPage(){return <><section className="panel"><h2>Settings</h2></section><SystemConnections/></>}
+export default function App(){return <div className="app"><aside><div className="brand"><div className="mark">B</div><div><b>BGSP#1</b><span>Company OS</span></div></div><nav>{modules.map(([path,label,Icon])=><NavLink key={path} to={path} end={path==='/'}><Icon size={19}/><span>{label}</span></NavLink>)}</nav><div className="company"><span>Workspace</span><b>Brainbanque Global Solutions</b></div></aside><main><header><div><span className="eyebrow">BGSP#1</span><h1>Workspace</h1></div><div className="avatar">L</div></header><div className="content"><Routes><Route path="/" element={<Dashboard/>}/><Route path="/tasks" element={<LiveModule type="tasks"/>}/><Route path="/clients" element={<LiveModule type="clients"/>}/><Route path="/projects" element={<LiveModule type="development"/>}/><Route path="/documents" element={<LiveModule type="documents"/>}/><Route path="/worklogs" element={<section className="panel"><h2>Time</h2><p>Next live module.</p></section>}/><Route path="/activities" element={<section className="panel"><h2>Activity</h2><p>Next live module.</p></section>}/><Route path="/settings" element={<SettingsPage/>}/></Routes></div></main></div>}
