@@ -1,107 +1,31 @@
-const SHEETS = {
-  tasks: ['id','createdAt','title','owner','dueDate','priority','status'],
-  development: ['id','createdAt','module','owner','stage','targetDate','notes'],
-  clients: ['id','createdAt','clientName','contactPerson','phone','email','status','nextFollowUp'],
-  documents: ['id','createdAt','clientName','documentName','documentType','driveUrl','receivedDate'],
-  users: ['id','createdAt','name','email','password','role','status']
-};
-
-const DEFAULT_SPREADSHEET_ID = '1l9TuPj5p0s0LM-8tkF5pytBEsQscoF7mQQiOijgrhVU';
-const DEFAULT_DRIVE_FOLDER_ID = '1QaJy5Zz9yDimQ1MfiRPD-Rp_HG9WNFx0';
-const DATA_FILE_NAME = 'BGSP-1-DATA.json';
-
-function doGet() { return jsonResponse({ ok:true, data:getSystemStatus() }); }
-function doPost(e) {
-  try {
-    const req = JSON.parse(e.postData.contents || '{}');
-    const action = req.action;
-    const payload = req.payload || {};
-    const actions = {
-      systemStatus: () => getSystemStatus(),
-      loadAll: () => loadAll(),
-      saveAll: () => saveAll(payload),
-      readDataFile: () => readDataFile(),
-      writeDataFile: () => writeDataFile(payload.data || payload),
-      syncSheetsToDataFile: () => writeDataFile(loadAll()),
-      syncDataFileToSheets: () => saveAll(readDataFile()),
-      uploadDocument: () => uploadDocument(payload)
-    };
-    if (!actions[action]) throw new Error('Unknown action: ' + action);
-    return jsonResponse({ ok:true, data:actions[action]() });
-  } catch (err) { return jsonResponse({ ok:false, error:err.message, stack:err.stack }); }
-}
-
-function getSystemStatus() {
-  const ss = getSpreadsheet();
-  const folder = getRootFolder();
-  const dataFile = getOrCreateDataFile();
-  return { connected:true, spreadsheet:{ id:ss.getId(), name:ss.getName(), url:ss.getUrl() }, drive:{ id:folder.getId(), name:folder.getName(), url:folder.getUrl() }, dataFile:{ id:dataFile.getId(), name:dataFile.getName(), url:dataFile.getUrl() }, checkedAt:new Date().toISOString() };
-}
-
-function saveAll(payload) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    Object.keys(SHEETS).forEach(key => writeSheet(key, payload[key] || []));
-    const snapshot = loadAll();
-    writeDataFile(snapshot);
-    return { savedAt:new Date().toISOString(), snapshotFile:DATA_FILE_NAME };
-  } finally { lock.releaseLock(); }
-}
-
-function loadAll() {
-  const data = {};
-  Object.keys(SHEETS).forEach(key => data[key] = readSheet(key));
-  return data;
-}
-
-function writeSheet(key, rows) {
-  const sheet = getSheet(key); const headers = SHEETS[key];
-  sheet.clearContents();
-  sheet.getRange(1,1,1,headers.length).setValues([headers]);
-  if (!rows.length) return;
-  const values = rows.map(row => headers.map(h => row[h] ?? ''));
-  sheet.getRange(2,1,values.length,headers.length).setValues(values);
-}
-
-function readSheet(key) {
-  const sheet = getSheet(key); const headers = SHEETS[key]; ensureHeaders(sheet, headers);
-  if (sheet.getLastRow() < 2) return [];
-  return sheet.getRange(2,1,sheet.getLastRow()-1,headers.length).getValues().map(row => {
-    const item = {}; headers.forEach((h,i) => item[h] = row[i] instanceof Date ? row[i].toISOString() : row[i]); return item;
-  });
-}
-
-function readDataFile() {
-  const text = getOrCreateDataFile().getBlob().getDataAsString();
-  return text ? JSON.parse(text) : emptyData();
-}
-
-function writeDataFile(data) {
-  const file = getOrCreateDataFile();
-  const body = JSON.stringify({ meta:{ project:'BGSP#1', updatedAt:new Date().toISOString(), version:1 }, data:data.data || data }, null, 2);
-  file.setContent(body);
-  return { fileId:file.getId(), name:file.getName(), url:file.getUrl(), updatedAt:new Date().toISOString() };
-}
-
-function getOrCreateDataFile() {
-  const folder = getRootFolder(); const files = folder.getFilesByName(DATA_FILE_NAME);
-  if (files.hasNext()) return files.next();
-  return folder.createFile(DATA_FILE_NAME, JSON.stringify({ meta:{ project:'BGSP#1', createdAt:new Date().toISOString(), version:1 }, data:emptyData() }, null, 2), MimeType.PLAIN_TEXT);
-}
-
-function uploadDocument(payload) {
-  if (!payload.base64 || !payload.fileName) throw new Error('base64 and fileName are required');
-  const bytes = Utilities.base64Decode(payload.base64);
-  const blob = Utilities.newBlob(bytes, payload.mimeType || 'application/octet-stream', payload.fileName);
-  const file = getRootFolder().createFile(blob);
-  return { fileId:file.getId(), name:file.getName(), url:file.getUrl() };
-}
-
-function emptyData() { const data={}; Object.keys(SHEETS).forEach(k => data[k]=[]); return data; }
-function getSpreadsheet() { return SpreadsheetApp.openById(getConfigValue('SPREADSHEET_ID', DEFAULT_SPREADSHEET_ID)); }
-function getRootFolder() { return DriveApp.getFolderById(getConfigValue('DRIVE_FOLDER_ID', DEFAULT_DRIVE_FOLDER_ID)); }
-function getSheet(key) { const ss=getSpreadsheet(); const name=key.charAt(0).toUpperCase()+key.slice(1); const sheet=ss.getSheetByName(name)||ss.insertSheet(name); ensureHeaders(sheet,SHEETS[key]); return sheet; }
-function ensureHeaders(sheet,headers) { const range=sheet.getRange(1,1,1,headers.length); const existing=range.getValues()[0]; if (!headers.every((h,i)=>existing[i]===h)) range.setValues([headers]); }
-function getConfigValue(name,fallback) { return PropertiesService.getScriptProperties().getProperty(name)||fallback; }
-function jsonResponse(body) { return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON); }
+const SHEETS={tasks:['id','createdAt','updatedAt','title','owner','dueDate','priority','status'],development:['id','createdAt','updatedAt','module','owner','stage','targetDate','notes'],clients:['id','createdAt','updatedAt','clientName','contactPerson','phone','email','status','nextFollowUp'],documents:['id','createdAt','updatedAt','clientName','documentName','documentType','driveUrl','receivedDate'],worklogs:['id','createdAt','updatedAt','date','employee','task','hours','notes'],activities:['id','createdAt','type','module','recordId','message','user'],users:['id','createdAt','updatedAt','name','email','role','status']};
+const DEFAULT_SPREADSHEET_ID='1l9TuPj5p0s0LM-8tkF5pytBEsQscoF7mQQiOijgrhVU';
+const DEFAULT_DRIVE_FOLDER_ID='1QaJy5Zz9yDimQ1MfiRPD-Rp_HG9WNFx0';
+const DATA_FILE_NAME='BGSP-1-DATA.json';
+function doGet(){return jsonResponse({ok:true,data:getSystemStatus()})}
+function doPost(e){try{const req=JSON.parse(e.postData.contents||'{}'),a=req.action,p=req.payload||{};const actions={systemStatus:()=>getSystemStatus(),loadAll:()=>loadAll(),listRecords:()=>readSheet(p.module),createRecord:()=>createRecord(p.module,p.record),updateRecord:()=>updateRecord(p.module,p.id,p.record),deleteRecord:()=>deleteRecord(p.module,p.id),readDataFile:()=>readDataFile(),writeDataFile:()=>writeDataFile(p.data||p),syncSheetsToDataFile:()=>writeDataFile(loadAll()),uploadDocument:()=>uploadDocument(p)};if(!actions[a])throw new Error('Unknown action: '+a);return jsonResponse({ok:true,data:actions[a]()})}catch(err){return jsonResponse({ok:false,error:err.message,stack:err.stack})}}
+function getSystemStatus(){const ss=getSpreadsheet(),folder=getRootFolder(),file=getOrCreateDataFile();return{connected:true,spreadsheet:{id:ss.getId(),name:ss.getName(),url:ss.getUrl()},drive:{id:folder.getId(),name:folder.getName(),url:folder.getUrl()},dataFile:{id:file.getId(),name:file.getName(),url:file.getUrl()},checkedAt:new Date().toISOString()}}
+function createRecord(module,record){validateModule(module);const lock=LockService.getScriptLock();lock.waitLock(30000);try{const now=new Date().toISOString(),item=Object.assign({},record,{id:record.id||makeId(module),createdAt:record.createdAt||now,updatedAt:now});appendRow(module,item);logActivity('CREATE',module,item.id,'Created '+displayName(module,item));syncSnapshot();return item}finally{lock.releaseLock()}}
+function updateRecord(module,id,patch){validateModule(module);if(!id)throw new Error('Record id is required');const lock=LockService.getScriptLock();lock.waitLock(30000);try{const sheet=getSheet(module),headers=SHEETS[module],row=findRow(sheet,id);if(row<2)throw new Error('Record not found: '+id);const current=rowToObject(sheet.getRange(row,1,1,headers.length).getValues()[0],headers);const item=Object.assign({},current,patch,{id:id,updatedAt:new Date().toISOString()});sheet.getRange(row,1,1,headers.length).setValues([headers.map(h=>item[h]??'')]);logActivity('UPDATE',module,id,'Updated '+displayName(module,item));syncSnapshot();return item}finally{lock.releaseLock()}}
+function deleteRecord(module,id){validateModule(module);if(!id)throw new Error('Record id is required');const lock=LockService.getScriptLock();lock.waitLock(30000);try{const sheet=getSheet(module),row=findRow(sheet,id);if(row<2)throw new Error('Record not found: '+id);sheet.deleteRow(row);logActivity('DELETE',module,id,'Deleted '+id);syncSnapshot();return{id:id,deleted:true}}finally{lock.releaseLock()}}
+function appendRow(module,item){const sheet=getSheet(module),headers=SHEETS[module];sheet.appendRow(headers.map(h=>item[h]??''))}
+function findRow(sheet,id){if(sheet.getLastRow()<2)return-1;const ids=sheet.getRange(2,1,sheet.getLastRow()-1,1).getDisplayValues();for(let i=0;i<ids.length;i++)if(ids[i][0]===String(id))return i+2;return-1}
+function logActivity(type,module,recordId,message){if(module==='activities')return;appendRow('activities',{id:makeId('activities'),createdAt:new Date().toISOString(),type:type,module:module,recordId:recordId,message:message,user:'System'})}
+function displayName(module,item){return item.title||item.clientName||item.module||item.documentName||item.task||item.id}
+function loadAll(){const data={};Object.keys(SHEETS).forEach(k=>data[k]=readSheet(k));return data}
+function readSheet(key){validateModule(key);const sheet=getSheet(key),headers=SHEETS[key];if(sheet.getLastRow()<2)return[];return sheet.getRange(2,1,sheet.getLastRow()-1,headers.length).getValues().map(r=>rowToObject(r,headers))}
+function rowToObject(row,headers){const item={};headers.forEach((h,i)=>item[h]=row[i]instanceof Date?row[i].toISOString():row[i]);return item}
+function syncSnapshot(){return writeDataFile(loadAll())}
+function readDataFile(){const text=getOrCreateDataFile().getBlob().getDataAsString();return text?JSON.parse(text):{data:emptyData()}}
+function writeDataFile(data){const file=getOrCreateDataFile();file.setContent(JSON.stringify({meta:{project:'BGSP#1',updatedAt:new Date().toISOString(),version:2},data:data.data||data},null,2));return{fileId:file.getId(),name:file.getName(),url:file.getUrl(),updatedAt:new Date().toISOString()}}
+function getOrCreateDataFile(){const folder=getRootFolder(),files=folder.getFilesByName(DATA_FILE_NAME);if(files.hasNext())return files.next();return folder.createFile(DATA_FILE_NAME,JSON.stringify({meta:{project:'BGSP#1',version:2},data:emptyData()},null,2),MimeType.PLAIN_TEXT)}
+function uploadDocument(p){if(!p.base64||!p.fileName)throw new Error('File data and name are required');const file=getRootFolder().createFile(Utilities.newBlob(Utilities.base64Decode(p.base64),p.mimeType||'application/octet-stream',p.fileName));const record=createRecord('documents',{clientName:p.clientName||'',documentName:file.getName(),documentType:p.documentType||file.getMimeType(),driveUrl:file.getUrl(),receivedDate:new Date().toISOString().slice(0,10)});return{fileId:file.getId(),name:file.getName(),url:file.getUrl(),record:record}}
+function makeId(module){return module.slice(0,3).toUpperCase()+'-'+Utilities.getUuid().slice(0,8).toUpperCase()}
+function validateModule(key){if(!SHEETS[key])throw new Error('Invalid module: '+key)}
+function emptyData(){const d={};Object.keys(SHEETS).forEach(k=>d[k]=[]);return d}
+function getSpreadsheet(){return SpreadsheetApp.openById(getConfigValue('SPREADSHEET_ID',DEFAULT_SPREADSHEET_ID))}
+function getRootFolder(){return DriveApp.getFolderById(getConfigValue('DRIVE_FOLDER_ID',DEFAULT_DRIVE_FOLDER_ID))}
+function getSheet(key){validateModule(key);const ss=getSpreadsheet(),name=key.charAt(0).toUpperCase()+key.slice(1),sheet=ss.getSheetByName(name)||ss.insertSheet(name);ensureHeaders(sheet,SHEETS[key]);return sheet}
+function ensureHeaders(sheet,headers){const current=sheet.getRange(1,1,1,headers.length).getValues()[0];if(!headers.every((h,i)=>current[i]===h))sheet.getRange(1,1,1,headers.length).setValues([headers])}
+function getConfigValue(name,fallback){return PropertiesService.getScriptProperties().getProperty(name)||fallback}
+function jsonResponse(body){return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON)}
