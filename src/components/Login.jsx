@@ -1,28 +1,20 @@
 import { useState } from 'react';
-
-const roles = [
-  ['employee', 'Employee', 'Tasks and time'],
-  ['management', 'Management', 'Operations and reports'],
-  ['admin', 'Office Admin', 'Clients, files and users'],
-  ['developer', 'Developer', 'Full system access']
-];
+import { login } from '../services/api';
 
 export default function Login({ onLogin }) {
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('employee');
-
-  function submit(e) {
-    e.preventDefault();
-    onLogin({ name: name.trim() || roles.find(r => r[0] === role)[1], role });
-  }
-
+  const [email,setEmail]=useState('');
+  const [password,setPassword]=useState('');
+  const [error,setError]=useState('');
+  const [busy,setBusy]=useState(false);
+  async function submit(e){e.preventDefault();setBusy(true);setError('');try{const result=await login(email,password);sessionStorage.setItem('bgspToken',result.token);onLogin(result.user)}catch(e){setError(e.message)}finally{setBusy(false)}}
   return <div className="login-shell"><div className="login-card">
     <div className="login-brand"><div className="mark">B</div><div><b>BGSP#1</b><span>Company OS</span></div></div>
-    <h1>Login</h1><p>Select your workspace access.</p>
+    <h1>Login</h1><p>Use your company account.</p>
+    {error&&<div className="error-box">{error}</div>}
     <form onSubmit={submit}>
-      <label><span>Name</span><input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" /></label>
-      <div className="role-grid">{roles.map(([value, label, note]) => <button type="button" key={value} className={role === value ? 'role-card selected' : 'role-card'} onClick={() => setRole(value)}><strong>{label}</strong><small>{note}</small></button>)}</div>
-      <button className="login-btn">Continue</button>
+      <label><span>Email</span><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@company.com" /></label>
+      <label><span>Password</span><input type="password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" /></label>
+      <button className="login-btn" disabled={busy}>{busy?'Checking...':'Login'}</button>
     </form>
   </div></div>;
 }
