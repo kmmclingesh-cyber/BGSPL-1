@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzF-_xufTDvZ-3dLz5rurF-YtabE7XGb5pRAbMi8xQspX0vV-TNQtyBmCBF_wXebipL/exec';
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxZJfeNPllCCfM-S5DXz8QCKIlv8YbJpWY7Xcy4pU8NmNQeMCT8W-8kZouzPNTxoAj0/exec';
 const API_URL = import.meta.env.VITE_APPS_SCRIPT_URL || DEFAULT_API_URL;
 
 export async function apiRequest(action, payload = {}) {
