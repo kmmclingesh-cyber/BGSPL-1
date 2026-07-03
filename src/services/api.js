@@ -13,6 +13,11 @@ export async function apiRequest(action, payload = {}) {
   return result.data;
 }
 
+export const systemStatus = () => apiRequest('systemStatus');
 export const loadAll = () => apiRequest('loadAll');
 export const saveAll = (data) => apiRequest('saveAll', data);
+export const readDataFile = () => apiRequest('readDataFile');
+export const writeDataFile = (data) => apiRequest('writeDataFile', { data });
+export const syncSheetsToDataFile = () => apiRequest('syncSheetsToDataFile');
+export const syncDataFileToSheets = () => apiRequest('syncDataFileToSheets');
 export const uploadDocument = (document) => apiRequest('uploadDocument', document);
