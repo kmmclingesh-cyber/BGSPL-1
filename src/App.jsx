@@ -1,5 +1,6 @@
 import { Routes, Route, NavLink } from 'react-router-dom';
 import { LayoutDashboard, CheckSquare, Users, FolderKanban, FileText, Clock3, Activity, Settings } from 'lucide-react';
+import SystemConnections from './components/SystemConnections';
 
 const modules = [
   ['/', 'Dashboard', LayoutDashboard], ['/tasks', 'Tasks', CheckSquare], ['/clients', 'Clients', Users],
@@ -9,7 +10,7 @@ const modules = [
 
 function Dashboard() {
   const cards = [['Active Tasks','0'],['Active Clients','0'],['Projects','0'],['Hours Today','0h']];
-  return <><div className="hero"><div><span className="eyebrow">BRAINBANQUE GLOBAL SOLUTIONS</span><h2>Company Command Centre</h2><p>Manage work, clients, files, people and the complete operating history of the company.</p></div><button>+ Create Task</button></div><div className="stats">{cards.map(([label,value])=><article key={label}><span>{label}</span><strong>{value}</strong><small>Ready for live Google Sheets data</small></article>)}</div><section className="panel"><h3>BGSP#1 Foundation</h3><p>The application shell is running. Next we connect the Apps Script API and replace these placeholders with live company data.</p></section></>;
+  return <><div className="hero"><div><span className="eyebrow">BRAINBANQUE GLOBAL SOLUTIONS</span><h2>Company Command Centre</h2><p>Manage work, clients, files, people and the complete operating history of the company.</p></div><button>+ Create Task</button></div><SystemConnections/><div className="stats">{cards.map(([label,value])=><article key={label}><span>{label}</span><strong>{value}</strong><small>Ready for live Google Sheets data</small></article>)}</div></>;
 }
 
 function Placeholder({ title }) { return <section className="panel"><span className="eyebrow">MODULE</span><h2>{title}</h2><p>This module is ready for development.</p></section>; }
