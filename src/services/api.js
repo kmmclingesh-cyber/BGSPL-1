@@ -1,7 +1,7 @@
-const API_URL = import.meta.env.VITE_APPS_SCRIPT_URL;
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzF-_xufTDvZ-3dLz5rurF-YtabE7XGb5pRAbMi8xQspX0vV-TNQtyBmCBF_wXebipL/exec';
+const API_URL = import.meta.env.VITE_APPS_SCRIPT_URL || DEFAULT_API_URL;
 
 export async function apiRequest(action, payload = {}) {
-  if (!API_URL) throw new Error('VITE_APPS_SCRIPT_URL is not configured.');
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -13,6 +13,7 @@ export async function apiRequest(action, payload = {}) {
   return result.data;
 }
 
+export const getApiUrl = () => API_URL;
 export const systemStatus = () => apiRequest('systemStatus');
 export const loadAll = () => apiRequest('loadAll');
 export const saveAll = (data) => apiRequest('saveAll', data);
